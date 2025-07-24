@@ -1,0 +1,50 @@
+
+import pandas as pd
+
+# === STEP 1: Carica le matrici Cij in individui ===
+xls = pd.ExcelFile("matrici_Cij_individui_1989_2024.xlsx")
+anni = xls.sheet_names
+
+# === STEP 2: Carica dati di popolazione ===
+df_pop = pd.read_csv("popolazione_1960_2025.csv")
+df_pop = df_pop.rename(columns={
+    "Entity": "Paese",
+    "Year": "Anno",
+    "Population (historical)": "Popolazione"
+})
+
+# === STEP 3: Definizione codici ISO e mappa paesi ===
+iso_to_nome = {
+    "DNK": "Denmark",
+    "DEU": "Germany",
+    "FRA": "France",
+    "GBR": "United Kingdom",
+    "NLD": "Netherlands",
+    "NOR": "Norway",
+    "SWE": "Sweden"
+}
+
+# === STEP 4: Filtra popolazione per anni e paesi di interesse ===
+df_pop = df_pop[df_pop["Paese"].isin(iso_to_nome.values()) & df_pop["Anno"].isin(map(int, anni))]
+pop_dict = {
+    str(anno): df_pop[df_pop["Anno"] == int(anno)].set_index("Paese")["Popolazione"]
+    for anno in anni
+}
+
+# === STEP 5: Calcolo di s_in_i(t) = somma_j≠i [ C_ij(t) * L_i(t) ] ===
+s_in = []
+for anno in anni:
+    C = xls.parse(anno, index_col=0)
+    L = pop_dict[anno]
+    s_in_anno = {}
+    for i_iso in iso_to_nome:
+        i_nome = iso_to_nome[i_iso]
+        Li = L[i_nome]
+        somma = sum(C.loc[i_iso, j_iso] * Li for j_iso in iso_to_nome if j_iso != i_iso)
+        s_in_anno[i_iso] = somma
+    df_sin_anno = pd.DataFrame.from_dict(s_in_anno, orient='index', columns=[int(anno)])
+    s_in.append(df_sin_anno)
+
+# === STEP 6: Unisci i risultati e salva ===
+df_sin = pd.concat(s_in, axis=1).sort_index()
+df_sin.to_csv("s_in_i_per_tempo.csv")
