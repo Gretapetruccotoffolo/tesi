@@ -1,34 +1,33 @@
 import pandas as pd
 
-# Carica il file CSV
-df = pd.read_csv('sample_CPUE_recent.csv')
+# 1. Carica il file CPUE
+df = pd.read_csv("CPUE.csv")
 
-# Rimuove eventuali spazi nelle intestazioni delle colonne
-df.columns = df.columns.str.strip()
+# 2. Uniforma 'GB-SCT' a 'GB'
+df['Country'] = df['Country'].replace({'GB-SCT': 'GB'})
 
-# Filtra i valori validi di cpue_hph (esclude -9 e valori nulli)
-df = df[df['cpue_hph'].apply(lambda x: isinstance(x, (int, float))) | df['cpue_hph'].apply(lambda x: str(x).replace('.', '', 1).isdigit())]
-df['cpue_hph'] = pd.to_numeric(df['cpue_hph'], errors='coerce')
-df = df[df['cpue_hph'] != -9]
-df = df.dropna(subset=['cpue_hph'])
+# 3. Converte CPUE_number_per_hour in numerico (interpreta il punto come decimale)
+df['CPUE_number_per_hour'] = pd.to_numeric(df['CPUE_number_per_hour'], errors='coerce')
 
-# Calcola la media dei cpue_hph per anno, paese, specie
-media_per_specie = (
-    df.groupby(['anno', 'paese', 'specie'])['cpue_hph']
-    .mean()
-    .reset_index()
-)
-
-# Somma le medie delle specie per ogni anno e paese
-media_totale = (
-    media_per_specie.groupby(['anno', 'paese'])['cpue_hph']
+# 4. Somma del CPUE per ogni haul (fissato Year, Country, HaulNo)
+#    cioè: somma su tutte le righe con stessa haul, specie, lngtClass
+haul_cpue = (
+    df
+    .groupby(['Country', 'Year', 'HaulNo'])['CPUE_number_per_hour']
     .sum()
-    .reset_index()
-    .rename(columns={'cpue_hph': 'cpue_per_haul_per_hour_tot_medio'})
+    .reset_index(name='CPUE_sum_per_haul')
 )
 
-# Arrotonda a 3 decimali
-media_totale['cpue_per_haul_per_hour_tot_medio'] = media_totale['cpue_per_haul_per_hour_tot_medio'].round(3)
+# 5. Media del CPUE per haul per ogni Country e Year
+ri = (
+    haul_cpue
+    .groupby(['Country', 'Year'])['CPUE_sum_per_haul']
+    .mean()
+    .reset_index(name='Ri')
+)
 
-# Salva il risultato in un nuovo CSV
-media_totale.to_csv('cpue_paese_anno_totmedio.csv', index=False)
+# 6. (Opzionale) Salva il risultato su file
+ri.to_csv("Ri_calcolato.csv", index=False)
+
+# 7. Mostra le prime righe
+print(ri.head())
