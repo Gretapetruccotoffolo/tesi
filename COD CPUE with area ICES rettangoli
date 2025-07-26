@@ -1,0 +1,13 @@
+import pandas as pd
+import numpy as np
+
+# Carica il file
+df = pd.read_csv("COD CPUE.csv")
+
+# Calcola l'area in km² per ogni riga usando ShootLat
+df["Area_km2"] = 111.1 * (111.1 * np.cos(np.radians(df["ShootLat"])))
+
+# Salva il nuovo file con la colonna aggiunta
+df.to_csv("COD_CPUE_with_area.csv", index=False)
+
+print("✅ File aggiornato: 'COD_CPUE_with_area.csv' con colonna 'Area_km2' aggiunta a ogni riga.")
