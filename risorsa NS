@@ -1,0 +1,22 @@
+import pandas as pd
+
+# Carica il file già completo
+df = pd.read_csv("COD_CPUE_with_area.csv")
+
+# Rimuove eventuali duplicati identici
+df = df.drop_duplicates(subset=["Year", "SubArea", "LngtClass", "Country", "Ship", "HaulNo"])
+
+# Calcola la media dei CPUE per combinazioni duplicate
+df_grouped = (
+    df.groupby(["Year", "SubArea", "LngtClass", "Area_km2"])
+    .agg(CPUE_number_per_hour_mean=("CPUE_number_per_hour", "mean"))
+    .reset_index()
+)
+
+# Salva il nuovo file
+df_grouped.to_csv("CPUE_mean_final.csv", index=False)
+
+print("✅ File creato: CPUE_mean_final.csv")
+
+
+
