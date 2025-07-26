@@ -20,3 +20,48 @@ print("✅ File creato: CPUE_mean_final.csv")
 
 
 
+
+
+import pandas as pd
+
+# Carica il file generato prima
+df = pd.read_csv("CPUE_mean_final.csv")
+
+# Calcola W (peso medio in kg)
+df["W"] = 0.007 * (df["LngtClass"] / 10) ** 3
+
+# Calcola Numero (stima numero individui nella SubArea)
+df["Numero"] = df["CPUE_number_per_hour_mean"] * (1 / 38.5631) * 1e6 * df["Area_km2"]
+
+# Seleziona solo le colonne richieste
+df_final = df[["Year", "SubArea", "W", "Numero"]]
+
+# Salva
+df_final.to_csv("Biomassa_cod_final.csv", index=False)
+
+print("✅ File creato: Biomassa_cod_final.csv")
+
+
+
+import pandas as pd
+
+# Carica il file
+df = pd.read_csv("Biomassa_cod_final.csv")
+
+# 1. Calcolo W_lngt (in migliaia di kg → tonnellate)
+df["W_lngt"] = (df["W"] * df["Numero"]) / 1_000_000
+
+# 2. Somma per Year + SubArea → W_sub
+sub_totals = df.groupby(["Year", "SubArea"]).agg(W_sub=("W_lngt", "sum")).reset_index()
+
+# 3. Somma per Year → W_NS
+ns_totals = sub_totals.groupby("Year").agg(W_NS=("W_sub", "sum")).reset_index()
+
+# 4. Salva il file finale
+ns_totals.to_csv("Biomassa_totale_cod_per_anno.csv", index=False)
+
+print("✅ File creato: Biomassa_totale_cod_per_anno.csv")
+
+
+
+
