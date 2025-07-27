@@ -1,22 +1,24 @@
 import pandas as pd
 
-# Carica il file già completo
+# Legge il file
 df = pd.read_csv("COD_CPUE_with_area.csv")
 
-# Rimuove eventuali duplicati identici
-df = df.drop_duplicates(subset=["Year", "SubArea", "LngtClass", "Country", "Ship", "HaulNo"])
+# Rinomina la colonna CPUE se serve
+if 'CPUE_number_per_hour' not in df.columns and 'CPUE_number_per_hour' in df.columns:
+    df.rename(columns={'CPUE_number_per_hour': 'CPUE_number_per_hour'}, inplace=True)
 
-# Calcola la media dei CPUE per combinazioni duplicate
-df_grouped = (
-    df.groupby(["Year", "SubArea", "LngtClass", "Area_km2"])
-    .agg(CPUE_number_per_hour_mean=("CPUE_number_per_hour", "mean"))
-    .reset_index()
-)
+# Raggruppa per Year, SubArea, LngtClass
+grouped = df.groupby(['Year', 'SubArea', 'LngtClass'], as_index=False).agg({
+    'Area_km2': 'first',                     # l’area è uguale per tutti i duplicati
+    'HaulDur': 'mean',                       # media se ci sono più righe
+    'CPUE_number_per_hour': 'mean'           # media se ci sono più righe
+})
 
-# Salva il nuovo file
-df_grouped.to_csv("CPUE_mean_final.csv", index=False)
+# Salva il risultato
+grouped.to_csv("CPUE_deduplicato.csv", index=False)
 
-print("✅ File creato: CPUE_mean_final.csv")
+print("✅ File creato: CPUE_deduplicato.csv")
+
 
 
 
@@ -24,44 +26,46 @@ print("✅ File creato: CPUE_mean_final.csv")
 
 import pandas as pd
 
-# Carica il file generato prima
-df = pd.read_csv("CPUE_mean_final.csv")
+# Carica il file creato in precedenza
+df = pd.read_csv("CPUE_deduplicato.csv")
 
-# Calcola W (peso medio in kg)
-df["W"] = 0.007 * (df["LngtClass"] / 10) ** 3
+# Calcola W
+a = 0.007
+b = 3
+df["W"] = a * (df["LngtClass"] / 10) ** b
 
-# Calcola Numero (stima numero individui nella SubArea)
-df["Numero"] = df["CPUE_number_per_hour_mean"] * (1 / 38.5631) * 1e6 * df["Area_km2"]
+# Calcola Numero
+df["Numero"] = df["CPUE_number_per_hour"] * (df["HaulDur"] / 60) * (df["Area_km2"] / 0.068484)
 
 # Seleziona solo le colonne richieste
-df_final = df[["Year", "SubArea", "W", "Numero"]]
+output_df = df[["Year", "SubArea", "W", "Numero"]]
 
-# Salva
-df_final.to_csv("Biomassa_cod_final.csv", index=False)
+# Salva il nuovo file
+output_df.to_csv("CPUE_con_W_e_Numero.csv", index=False)
 
-print("✅ File creato: Biomassa_cod_final.csv")
+print("✅ File creato: CPUE_con_W_e_Numero.csv")
+
+
+
 
 
 
 import pandas as pd
 
 # Carica il file
-df = pd.read_csv("Biomassa_cod_final.csv")
+df = pd.read_csv("CPUE_con_W_e_Numero.csv")
 
-# 1. Calcolo W_lngt (in migliaia di kg → tonnellate)
+# Calcola W_lngt
 df["W_lngt"] = (df["W"] * df["Numero"]) / 1_000_000
 
-# 2. Somma per Year + SubArea → W_sub
-sub_totals = df.groupby(["Year", "SubArea"]).agg(W_sub=("W_lngt", "sum")).reset_index()
+# Somma per Year e SubArea → W_sub
+w_sub = df.groupby(["Year", "SubArea"], as_index=False)["W_lngt"].sum()
 
-# 3. Somma per Year → W_NS
-ns_totals = sub_totals.groupby("Year").agg(W_NS=("W_sub", "sum")).reset_index()
+# Somma per Year → W_NS
+w_ns = w_sub.groupby("Year", as_index=False)["W_lngt"].sum()
+w_ns.rename(columns={"W_lngt": "W_NS"}, inplace=True)
 
-# 4. Salva il file finale
-ns_totals.to_csv("Biomassa_totale_cod_per_anno.csv", index=False)
+# Salva il file
+w_ns.to_csv("Biomassa_Annua_NS.csv", index=False)
 
-print("✅ File creato: Biomassa_totale_cod_per_anno.csv")
-
-
-
-
+print("✅ File creato: Biomassa_Annua_NS.csv")
