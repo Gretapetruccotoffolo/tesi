@@ -1,28 +1,16 @@
 import pandas as pd
-import numpy as np
 
-# Leggo il file CSV
-df = pd.read_csv('swept_area.csv')
+# Carica il file
+df = pd.read_csv("swept_area.csv")
 
-# Creo la colonna 'msSpeed' (Groundspeed in m/s)
-df['msSpeed'] = np.where(df['Groundspeed'] > 0, df['Groundspeed'] * 0.5144, np.nan)
+# Filtra solo i valori > 0
+groundspeed_pos = df[df["GroundSpeed"] > 0]["GroundSpeed"]
+wingspread_pos = df[df["Cal_WingSpread"] > 0]["Cal_WingSpread"]
 
-# Creo la colonna 'SW_s' (Swept area in m²/s)
-df['SW_s'] = np.where(df['cal_WingSpread'] > 0, df['cal_WingSpread'] * df['msSpeed'], np.nan)
+# Calcola le medie
+media_groundspeed = groundspeed_pos.mean()
+media_wingspread = wingspread_pos.mean()
 
-# Calcolo la media dei valori non nulli di SW_s
-sw_s_mean = df['SW_s'].mean(skipna=True)
-
-# Creo una copia del dataframe per aggiungere la media in fondo
-df_with_mean = df.copy()
-
-# Aggiungo una riga con la media di SW_s
-mean_row = pd.Series({col: '' for col in df.columns})
-mean_row['SW_s'] = f"Media SW_s: {sw_s_mean:.4f}"
-df_with_mean = pd.concat([df_with_mean, pd.DataFrame([mean_row])], ignore_index=True)
-
-# Salvo il nuovo file
-df_with_mean.to_csv('Swept_area_new.csv', index=False)
-
-# Stampo la media di SW_s
-print(f"La media dei valori non nulli di SW_s è: {sw_s_mean:.4f} m²/s")
+# Stampa i risultati
+print(f"✅ Media Groundspeed (> 0): {media_groundspeed:.2f}")
+print(f"✅ Media Cal_WingSpread (> 0): {media_wingspread:.2f}")
