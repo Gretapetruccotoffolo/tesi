@@ -1,0 +1,22 @@
+import pandas as pd
+
+# Carica il file Excel con le landings e percentuali
+landings = pd.read_excel("Landings_Percentuali.xlsx")
+
+# Carica il file CSV con i dati di TSB (B_NS)
+cpue_b = pd.read_csv("TSB.csv")
+
+# Assicurati che la colonna si chiami 'Year' e 'B_NS'
+cpue_b = cpue_b.rename(columns={"B_NS": "TSB"})
+
+# Merge dei due dataframe sulla colonna Year
+df = pd.merge(landings, cpue_b, on="Year", how="left")
+
+# Calcolo di Ri = Percentuale * TSB / 100
+df["Ri"] = df["Percentuale"] * df["TSB"] / 100
+
+# Salva il risultato in un nuovo file Excel
+df.to_excel("Ri.xlsx", index=False)
+
+# Mostra le prime righe per controllo
+df.head()
