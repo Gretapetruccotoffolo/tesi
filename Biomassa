@@ -1,0 +1,61 @@
+import pandas as pd
+
+# Carica il file
+df = pd.read_csv("CPUE_mean_final.csv")
+
+# Costanti biologiche
+a = 0.007
+b = 3
+
+# Calcola W (peso medio) e Numero_per_km2 (numero stimato per km²)
+df["W"] = a * (df["LngtClass"] / 10) ** b
+df["Numero_per_km2"] = df["CPUE_number_per_hour_mean"] / 0.1371758
+
+# Estrai solo le colonne richieste
+df_out = df[["Year", "SubArea", "W", "Numero_per_km2", "Area_km2"]]
+
+# Salva il risultato
+df_out.to_csv("CPUE_output_final.csv", index=False)
+
+
+
+
+
+import pandas as pd
+
+# 1. Carica il file di input
+df = pd.read_csv("CPUE_output_final.csv")
+
+# 2. Calcola Numero_Sub
+df["Numero_Sub"] = df["Numero_per_km2"] * df["Area_km2"]
+
+# 3. Seleziona le colonne richieste
+df_out = df[["Year", "SubArea", "W", "Numero_Sub"]]
+
+# 4. Salva il nuovo file
+df_out.to_csv("CPUE_W_Numero_Sub.csv", index=False)
+
+
+
+
+
+
+import pandas as pd
+
+# 1. Carica il file
+df = pd.read_csv("CPUE_W_Numero_Sub.csv")
+
+# 2. Calcola B_lngt
+df["B_lngt"] = (df["W"] * df["Numero_Sub"]) / 1_000_000
+
+# 3. Calcola B_sub per Year e SubArea
+df_sub = df.groupby(["Year", "SubArea"], as_index=False)["B_lngt"].sum()
+df_sub.rename(columns={"B_lngt": "B_sub"}, inplace=True)
+
+# 4. Calcola B_NS per Year
+df_ns = df_sub.groupby("Year", as_index=False)["B_sub"].sum()
+df_ns.rename(columns={"B_sub": "B_NS"}, inplace=True)
+
+# 5. Salva il risultato
+df_ns.to_csv("CPUE_B_NS.csv", index=False)
+
