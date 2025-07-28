@@ -1,0 +1,63 @@
+import pandas as pd
+import numpy as np
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+
+# === 1. Carica i dati
+b_df = pd.read_csv("TSB.csv")           # contiene: Year, B_NS
+h_df = pd.read_csv("Harvest.csv")       # contiene: Year, H
+
+# === 2. Filtro per gli anni 1980–2021
+years = np.arange(1980, 2022)
+b_df = b_df[b_df["Year"].isin(years)].copy()
+h_df = h_df[h_df["Year"].isin(years)].copy()
+
+# === 3. Merge e calcolo dB/dt
+merged = pd.merge(b_df, h_df, on="Year")
+merged["B_next"] = merged["B_NS"].shift(-1)
+merged = merged.dropna()
+
+merged["dB_dt"] = (merged["B_next"] - merged["B_NS"])  # ΔB = B(t+1) - B(t)
+B = merged["B_NS"].values
+H = merged["H"].values
+dB_dt = merged["dB_dt"].values
+
+# === 4. Definisce la funzione del modello da fittare
+def logistic_with_harvest(B, r, K, H):
+    return r * B * (1 - B / K) - H
+
+# === 5. Wrap: la funzione target da fittare rispetto a B, con H come input esterno
+def model(B, r, K):
+    return logistic_with_harvest(B, r, K, H)
+
+# === 6. Stima dei parametri con curve_fit
+initial_guess = [0.3, 100000]  # r, K
+params, _ = curve_fit(model, B, dB_dt, p0=initial_guess)
+
+r_fit, K_fit = params
+print(f"✅ Parametri stimati:\nr = {r_fit:.4f}\nK = {K_fit:.2f}")
+
+# === 7. Grafico confronto dB/dt osservato vs stimato
+dB_dt_fit = model(B, r_fit, K_fit)
+
+plt.figure(figsize=(10, 6))
+plt.plot(merged["Year"], dB_dt, label="Osservato (ΔB)", marker='o')
+plt.plot(merged["Year"], dB_dt_fit, label="Stimato", linestyle='--')
+plt.xlabel("Anno")
+plt.ylabel("ΔB")
+plt.title("Variazione annuale della biomassa (ΔB = dB/dt)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("DB.png", dpi=300)
+plt.show()
+
+
+
+
+
+
+
+✅ Parametri stimati:
+r = 0.4453
+K = 918649.93
