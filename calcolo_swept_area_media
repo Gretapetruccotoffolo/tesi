@@ -14,3 +14,11 @@ media_wingspread = wingspread_pos.mean()
 # Stampa i risultati
 print(f"✅ Media Groundspeed (> 0): {media_groundspeed:.2f}")
 print(f"✅ Media Cal_WingSpread (> 0): {media_wingspread:.2f}")
+
+
+
+
+
+
+✅ Media Groundspeed (> 0): 3.81            (nodi)
+✅ Media Cal_WingSpread (> 0): 19.43        (m)
