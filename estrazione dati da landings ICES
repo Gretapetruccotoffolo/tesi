@@ -1,0 +1,99 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Carica il file originale
+df = pd.read_csv("ICES_tot_landings.csv", encoding="ISO-8859-1")
+df.columns = df.columns.str.strip()
+
+# 2. Se serve, dividi la prima colonna (Country,Species,Division)
+if df.columns[0].count(',') >= 2:
+    df[['Country', 'Species', 'Division']] = df.iloc[:, 0].str.split(',', expand=True)
+
+# 3. Pulisci
+df['Country'] = df['Country'].str.strip()
+df['Species'] = df['Species'].str.strip()
+df['Division'] = df['Division'].str.strip()
+
+# 4. Mappa i paesi a sigle standard
+mappa_paesi = {
+    "UK - Scotland": "UK",
+    "UK - England & Wales": "UK",
+    "UK - N. Ireland": "UK",
+    "UK+SCO": "UK",
+    "UK - Eng+Wales+N.Irl.": "UK",
+    "Germany, Fed. Rep. of": "DE",
+    "France": "FR",
+    "Denmark": "DK",
+    "Netherlands": "NL",
+    "Norway": "NO",
+    "Belgium": "BE"
+}
+df['Country'] = df['Country'].replace(mappa_paesi)
+
+
+# 4b. Filtra solo i paesi richiesti
+paesi_target = ['DE', 'NO', 'BE', 'NL', 'FR', 'UK', 'DK']
+df = df[df['Country'].isin(paesi_target)]
+
+
+# 5. Filtro divisioni Mare del Nord + Skagerrak
+divisioni_target = ['IVa', 'IVb', 'IVc', 'IIIa', 'IV a', 'IV b', 'IV c', 'III a']
+df = df[df['Division'].isin(divisioni_target)]
+
+
+
+# 6. Filtra per Atlantic cod
+df = df[df['Species'].str.contains("Atlantic cod", case=False, na=False)]
+
+# 7. Trasforma in formato long
+df_long = df.melt(
+    id_vars=['Country', 'Species', 'Division'],
+    var_name='Year',
+    value_name='Landings'
+)
+
+# 8. Converti tipi e pulisci
+df_long['Year'] = pd.to_numeric(df_long['Year'], errors='coerce')
+df_long['Landings'] = pd.to_numeric(df_long['Landings'], errors='coerce')
+df_long = df_long.dropna(subset=['Year', 'Landings'])
+
+# 9. Raggruppa per anno e paese
+df_cod = df_long.groupby(['Year', 'Country'], as_index=False)['Landings'].sum()
+
+# 10. Calcola il totale annuale
+df_total = df_cod.groupby('Year', as_index=False)['Landings'].sum()
+df_total['Country'] = 'Total'
+
+
+
+
+
+
+
+
+# 11. Unisci e plottiamo
+df_plot = pd.concat([df_cod, df_total], ignore_index=True)
+
+# 🔽 Salva i dati in CSV
+df_plot.to_csv("landings_atlantic_cod_NS.csv", index=False)
+
+# 12. Plot
+plt.figure(figsize=(14, 7))
+for country in df_plot['Country'].unique():
+    subset = df_plot[df_plot['Country'] == country]
+    plt.plot(subset['Year'], subset['Landings'], label=country)
+
+plt.title("Landings nel Mare del Nord per paese e totale")
+plt.xlabel("Anno")
+plt.ylabel("Landings (tonnellate)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("landings_atlantic_cod_NS.png", dpi=300)
+
+# 🔽 Salva plot
+plt.savefig("landings_atlantic_cod_NS.png", dpi=300)
+
+plt.show()
+
+
