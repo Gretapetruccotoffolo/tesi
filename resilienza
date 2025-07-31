@@ -1,0 +1,87 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+# === PARAMETRI ===
+alpha = 0.4
+Keff = 168062
+delta = 0.1755
+
+# === FUNZIONE POLINOMIALE ===
+def polynomial(R, eta, c_eff):
+    return alpha * R * (R - 0.1 * c_eff) * (1 - R / Keff) - delta * eta * R
+
+# === RANGE ETA ===
+eta_vals = np.linspace(0, 80000, 800)
+R_min, R_mid, R_max = [], [], []
+
+# Usa un valore fisso medio per ceff per le curve (approssimazione visiva)
+c_eff_media = 36259.6
+
+for eta in eta_vals:
+    # Coefficienti del polinomio cubico: a*R³ + b*R² + c*R + d = 0
+    a = -alpha / Keff
+    b = alpha
+    c = -alpha * 0.1 * c_eff_media - delta * eta
+    d = 0
+
+    coeffs = [a, b, c, d]
+    roots = np.roots(coeffs)
+    real_roots = sorted([np.real(r) for r in roots if np.isreal(r)])
+
+    if len(real_roots) == 3:
+        R_min.append(real_roots[0])
+        R_mid.append(real_roots[1])
+        R_max.append(real_roots[2])
+    elif len(real_roots) == 1:
+        R_min.append(real_roots[0])
+        R_mid.append(np.nan)
+        R_max.append(np.nan)
+    else:
+        R_min.append(np.nan)
+        R_mid.append(np.nan)
+        R_max.append(np.nan)
+
+# === DATI OSSERVATI ===
+reff_df = pd.read_csv("R effettivo con E in tons.csv")
+ceff_df = pd.read_csv("c effettiva con E in tons.csv")
+eta_df = pd.read_csv("eta effettiva tons con EI.csv")
+
+# Merge dei file per anno
+merged = reff_df.merge(ceff_df, on="Year").merge(eta_df, on="Year")
+
+# Estrai colonne corrette
+reff_obs = merged["Reff(t) from Export (tons)"]
+eta_obs = merged["eta_effettiva_tons"]
+years = merged["Year"]
+
+# === COLORE ANNO ===
+norm = plt.Normalize(years.min(), years.max())
+cmap = cm.get_cmap("turbo")
+
+# === GRAFICO ===
+plt.figure(figsize=(10, 6))
+plt.plot(eta_vals, R_min, color="red", linewidth=2.5, label="Depleted")
+plt.plot(eta_vals, R_mid, color="green", linewidth=1.5, label="Unstable")
+plt.plot(eta_vals, R_max, color="blue", linewidth=1.5, label="Sustainable")
+
+# Scatter osservati colorati per anno
+for i in range(len(eta_obs)):
+    plt.scatter(eta_obs.iloc[i], reff_obs.iloc[i],
+                color=cmap(norm(years.iloc[i])), marker='x', s=50)
+
+# Colorbar
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+plt.colorbar(sm, label="Anno")
+
+# Etichette assi
+plt.xlabel(r"$\eta_{\mathrm{eff}}$ (tons)")
+plt.ylabel(r"$R_{\mathrm{eff}}$ (tons)")
+plt.xlim(0, 80000)
+plt.ylim(0)
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
