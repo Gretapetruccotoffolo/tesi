@@ -11,7 +11,7 @@ ceff = pd.read_csv("c effettivo con s Cnorm.csv").iloc[:, 1].astype(float)
 etaeff = pd.read_csv("eta effettiva con sout sin e C norm.csv").iloc[:, 1].astype(float)
 
 # === 3. Calcola i due termini
-g_term = alpha * reff * (reff - ceff) * (1 - reff / K)
+g_term = alpha * reff * (reff - 0.1 * ceff) * (1 - reff / K)
 h_term = etaeff * reff
 
 # === 4. Somma entrambi i lati su tutti gli anni
