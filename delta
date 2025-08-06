@@ -1,0 +1,26 @@
+import pandas as pd
+
+# === 1. Parametri noti ===
+alpha = 0.4453
+K = 175382
+lhs = -10623.27  # lato sinistro dell'equazione
+
+# === 2. Carica le colonne dei valori
+reff = pd.read_csv("R effettiva con s Cnorm.csv").iloc[:, 1].astype(float)
+ceff = pd.read_csv("c effettivo con s Cnorm.csv").iloc[:, 1].astype(float)
+etaeff = pd.read_csv("eta effettiva con sout sin e C norm.csv").iloc[:, 1].astype(float)
+
+# === 3. Calcola i due termini
+g_term = alpha * reff * (reff - ceff) * (1 - reff / K)
+h_term = etaeff * reff
+
+# === 4. Somma entrambi i lati su tutti gli anni
+lhs_tot = lhs * len(reff)  # somma totale del membro sinistro
+g_tot = g_term.sum()
+h_tot = h_term.sum()
+
+# === 5. Risolvi per d: lhs_tot = g_tot - d * h_tot  →  d = (g_tot - lhs_tot) / h_tot
+d = (g_tot - lhs_tot) / h_tot
+
+# === 6. Mostra il valore unico di d
+print(f"Valore interpolato unico di d: {d:.4f}")
