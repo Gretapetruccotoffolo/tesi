@@ -1,0 +1,82 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# === 1. Parametri fissi ===
+alpha = 0.4453
+K = 175382
+d = 0.0002
+
+# === 2. Carica ceff e calcola ceff medio ridotto
+ceff_df = pd.read_csv("c effettivo con s Cnorm.csv")
+ceff_series = ceff_df.iloc[:, 1].astype(float)
+ceff_mean = 0.1 * ceff_series.mean()
+
+# === 3. Intervallo di eta_eff
+eta_vals = np.linspace(0.4e8, 1e8, 300)
+
+# === 4. Liste per le curve teoriche
+eta_zero, reff_zero = [], []
+eta_low, reff_low = [], []
+eta_high, reff_high = [], []
+
+# === 5. Risolvi equazione per ogni eta_eff
+for eta in eta_vals:
+    A = -alpha / K
+    B = alpha * (1 + ceff_mean / K)
+    C = -alpha * ceff_mean - d * eta
+    D = 0
+
+    coeffs = [A, B, C, D]
+    roots = np.roots(coeffs)
+
+    real_roots = sorted([r.real for r in roots if np.isreal(r) and 0 <= r.real <= 160000])
+
+    if any(np.isclose(r, 0) for r in real_roots):
+        eta_zero.append(eta)
+        reff_zero.append(0)
+
+    positive_roots = [r for r in real_roots if r > 0]
+
+    if len(positive_roots) >= 1:
+        eta_low.append(eta)
+        reff_low.append(positive_roots[0])
+
+    if len(positive_roots) >= 2:
+        eta_high.append(eta)
+        reff_high.append(positive_roots[-1])
+
+# === 6. Dati osservati: merge su 'Year'
+reff_df = pd.read_csv("R effettiva con s Cnorm.csv")
+etaeff_df = pd.read_csv("eta effettiva con sout sin e C norm.csv")
+
+merged_obs = pd.merge(reff_df, etaeff_df, on='Year')
+merged_obs.columns = ['Year', 'Reff', 'Eta_eff']
+
+reff_obs = merged_obs["Reff"].astype(float)
+etaeff_obs = merged_obs["Eta_eff"].astype(float)
+years_obs = merged_obs["Year"]
+
+# === 7. Plot
+plt.figure(figsize=(10, 5))
+
+# Curve teoriche
+plt.scatter(eta_zero, reff_zero, s=5, color='red', label='depleted')
+plt.scatter(eta_low, reff_low, s=5, color='green', label='unstable')
+plt.scatter(eta_high, reff_high, s=5, color='blue', label='sustainable')
+
+# Punti osservati colorati per anno
+scatter = plt.scatter(etaeff_obs, reff_obs, c=years_obs, cmap='plasma', s=25, label='data', zorder=5)
+cbar = plt.colorbar(scatter)
+cbar.set_label("Anno")
+
+# === 8. Etichette e layout
+plt.xlabel("η effettiva")
+plt.ylabel("R effettiva")
+plt.xlim(0.4e8, 1e8)
+plt.ylim(0, 160000)
+plt.grid(True)
+plt.legend(loc='lower left')
+plt.tight_layout()
+plt.savefig("resilienza con s e Cnorm", dpi=300)
+plt.show()
