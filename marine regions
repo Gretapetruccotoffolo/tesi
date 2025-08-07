@@ -1,0 +1,56 @@
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+# === 1. Carica lo shapefile delle intersezioni EEZ ∩ IHO ===
+gdf = gpd.read_file("Intersect_EEZ_IHO_v5_20241010.shp")
+
+# === 2. Filtra solo le geometrie appartenenti al Mare del Nord ===
+north_sea = gdf[gdf["IHO_Sea"] == "North Sea"].copy()
+north_sea = north_sea[north_sea.geometry.notnull() & ~north_sea.geometry.is_empty]
+
+# === 3. Calcola area in km² se non disponibile
+if "AREA_KM2" not in north_sea.columns or north_sea["AREA_KM2"].isnull().all():
+    north_sea = north_sea.to_crs("EPSG:3857")
+    north_sea["AREA_KM2"] = north_sea.geometry.area / 1e6
+
+# === 4. Raggruppa per paese
+area_by_country = north_sea.groupby("ISO_TER1")["AREA_KM2"].sum().reset_index()
+area_by_country.columns = ["Country", "Area_km2"]
+area_by_country = area_by_country.sort_values("Area_km2", ascending=False)
+
+# === 5. Plot con etichette numeriche sopra le barre
+fig, ax = plt.subplots(figsize=(10, 6))
+bars = ax.bar(area_by_country["Country"], area_by_country["Area_km2"], color="skyblue")
+
+# Aggiungi etichette numeriche sopra ogni barra
+for bar in bars:
+    height = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width() / 2, height + 200,  # +200 per separare leggermente
+            f"{height:,.0f}", ha='center', va='bottom', fontsize=9)
+
+# Dettagli grafico
+ax.set_ylabel("Surface (km²)", fontsize=12)
+ax.set_xlabel("Country", fontsize=12)
+ax.grid(axis="y", linestyle="--", alpha=0.5)
+plt.tight_layout()
+plt.savefig("isto eez", dpi=300)
+plt.show()
+
+
+
+#&:
+
+# === 3. Proietta in Mercatore per disegno corretto (EPSG:3857)
+north_sea = north_sea.to_crs("EPSG:3857")
+
+# === 4. Disegna la mappa
+fig, ax = plt.subplots(figsize=(10, 10))
+north_sea.plot(column="ISO_TER1", ax=ax, legend=True, cmap="tab20", edgecolor='black', linewidth=0.5)
+
+# === 5. Migliorie grafiche
+ax.set_axis_off()
+
+# === 6. Mostra
+plt.tight_layout()
+plt.savefig("intersezioni eez e ns", dpi=300)
+plt.show()
