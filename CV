@@ -22,4 +22,21 @@ cv_per_country_ri
 
 
 
+# Caricare i file Li.csv e Ri.csv
+df_li = pd.read_csv('Li.csv')
+df_ri = pd.read_csv('Ri 1980 2021.csv')
+
+# Calcolare il CV per ogni paese per Ri e Li
+cv_per_country_ri = df_ri.groupby('Country')['Ri'].agg(lambda x: (x.std() / x.mean()) * 100)
+cv_per_country_li = df_li.groupby('Country')['Li'].agg(lambda x: (x.std() / x.mean()) * 100)
+
+# Calcolare il rapporto CV(Ri) / CV(Li)
+cv_ratio = cv_per_country_ri / cv_per_country_li
+
+# Mostrare i risultati
+cv_ratio
+
+
+
+
 
