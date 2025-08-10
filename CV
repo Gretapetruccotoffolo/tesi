@@ -1,0 +1,25 @@
+import pandas as pd
+
+# Carica il file Li.csv
+df = pd.read_csv('Li.csv')
+
+# Calcolare il coefficiente di variazione (CV) per ogni paese
+cv_per_country = df.groupby('Country')['Li'].agg(lambda x: (x.std() / x.mean()) * 100)
+
+# Mostrare i risultati
+cv_per_country
+
+
+
+# Caricare il file Ri.csv
+df_ri = pd.read_csv('Ri 1980 2021.csv')
+
+# Calcolare il coefficiente di variazione (CV) per ogni paese
+cv_per_country_ri = df_ri.groupby('Country')['Ri'].agg(lambda x: (x.std() / x.mean()) * 100)
+
+# Mostrare i risultati
+cv_per_country_ri
+
+
+
+
